@@ -29,8 +29,10 @@
   /* -------------------- URL building -------------------- */
   function buildUrl(campaign, refer) {
     let u;
+    // Landing page can be per-language; fall back to the English base.
+    const base = localized(campaign, 'landingPageUrl') || campaign.landingPageUrl;
     try {
-      u = new URL(campaign.landingPageUrl);
+      u = new URL(base);
     } catch {
       return '';
     }
@@ -284,6 +286,7 @@
     renderCampaignList();
     if (state.selected) {
       updateBuilderTitle();
+      refreshUrl(); // landing page may differ per language
       renderCreatives(state.selected);
     }
     if (els.langSelect.value !== window.I18N.current()) els.langSelect.value = window.I18N.current();

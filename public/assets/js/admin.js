@@ -74,8 +74,17 @@
   /* -------------------- Content languages (title + description) -------------------- */
   function emptyContent() {
     const c = {};
-    CONTENT_LANGS.forEach((l) => { c[l.code] = { title: '', description: '' }; });
+    CONTENT_LANGS.forEach((l) => { c[l.code] = { title: '', description: '', landingPageUrl: '' }; });
     return c;
+  }
+
+  function isValidUrl(u) {
+    try {
+      const p = new URL(String(u));
+      return p.protocol === 'http:' || p.protocol === 'https:';
+    } catch {
+      return false;
+    }
   }
 
   function resetContent() {
@@ -87,7 +96,7 @@
 
   function langHasContent(code) {
     const v = content[code];
-    return !!(v && (v.title.trim() || v.description.trim()));
+    return !!(v && (v.title.trim() || v.description.trim() || (v.landingPageUrl || '').trim()));
   }
 
   function renderLangTabs() {
@@ -105,23 +114,31 @@
   }
 
   function stashInputsToActive() {
-    content[activeLang] = { title: $('fTitle').value, description: $('fDesc').value };
+    content[activeLang] = {
+      title: $('fTitle').value,
+      description: $('fDesc').value,
+      landingPageUrl: $('fLanding').value,
+    };
   }
 
   function loadLangIntoInputs(code) {
     const meta = CONTENT_LANGS.find((l) => l.code === code);
-    const v = content[code] || { title: '', description: '' };
+    const v = content[code] || { title: '', description: '', landingPageUrl: '' };
     $('fTitle').value = v.title;
     $('fDesc').value = v.description;
+    $('fLanding').value = v.landingPageUrl || '';
     // English is required; other languages fall back to it.
-    $('titleReq').style.display = code === 'en' ? '' : 'none';
+    const req = code === 'en' ? '' : 'none';
+    $('titleReq').style.display = req;
+    $('landingReq').style.display = req;
     const dir = meta && meta.rtl ? 'rtl' : 'ltr';
     $('fTitle').dir = dir;
     $('fDesc').dir = dir;
+    $('fLanding').dir = 'ltr'; // URLs are always left-to-right
     $('contentHint').textContent =
       code === 'en'
-        ? 'Title and description partners see. English is required; other languages are optional and fall back to English.'
-        : `Optional ${meta ? meta.label : code} translation. Leave blank to fall back to English.`;
+        ? 'Title, description and landing page partners see. English is required; other languages are optional and fall back to English.'
+        : `Optional ${meta ? meta.label : code} translation. Leave any field blank to fall back to English.`;
   }
 
   function switchLang(code) {
@@ -242,17 +259,20 @@
 
   function editCampaign(c) {
     $('campId').value = c.id;
-    $('fLanding').value = c.landingPageUrl;
     $('fUtm').value = c.utmCampaign;
     $('fStatus').value = c.status;
 
     // Load per-language content: English from the base fields, others from translations.
     content = emptyContent();
-    content.en = { title: c.title || '', description: c.description || '' };
+    content.en = { title: c.title || '', description: c.description || '', landingPageUrl: c.landingPageUrl || '' };
     const tr = c.translations || {};
     CONTENT_LANGS.forEach((l) => {
       if (l.code !== 'en' && tr[l.code]) {
-        content[l.code] = { title: tr[l.code].title || '', description: tr[l.code].description || '' };
+        content[l.code] = {
+          title: tr[l.code].title || '',
+          description: tr[l.code].description || '',
+          landingPageUrl: tr[l.code].landingPageUrl || '',
+        };
       }
     });
     activeLang = 'en';
@@ -298,6 +318,11 @@
       switchLang('en');
       return;
     }
+    if (!isValidUrl(content.en.landingPageUrl)) {
+      $('formErr').textContent = 'A valid English landing page URL is required.';
+      switchLang('en');
+      return;
+    }
     if (!visuals['9:16']) {
       $('formErr').textContent = 'A 9:16 portrait key visual is required.';
       return;
@@ -308,7 +333,8 @@
       if (l.code === 'en') return;
       const title = content[l.code].title.trim();
       const description = content[l.code].description.trim();
-      if (title || description) translations[l.code] = { title, description };
+      const landingPageUrl = content[l.code].landingPageUrl.trim();
+      if (title || description || landingPageUrl) translations[l.code] = { title, description, landingPageUrl };
     });
 
     const id = $('campId').value;
@@ -316,8 +342,8 @@
       id: id || undefined,
       title: content.en.title.trim(),
       description: content.en.description.trim(),
+      landingPageUrl: content.en.landingPageUrl.trim(),
       translations,
-      landingPageUrl: $('fLanding').value.trim(),
       utmCampaign: $('fUtm').value.trim(),
       status: $('fStatus').value,
       visuals: Object.entries(visuals).map(([ratio, v]) => ({ ratio, ...v })),

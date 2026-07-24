@@ -34,10 +34,14 @@ export default async (req) => {
 
   const allowed = new Set();
   for (const c of await readCatalog()) {
-    try {
-      allowed.add(new URL(c.landingPageUrl).origin);
-    } catch {
-      /* ignore malformed stored URL */
+    const urls = [c.landingPageUrl];
+    if (c.translations) {
+      for (const tr of Object.values(c.translations)) {
+        if (tr && tr.landingPageUrl) urls.push(tr.landingPageUrl);
+      }
+    }
+    for (const u of urls) {
+      try { allowed.add(new URL(u).origin); } catch { /* ignore malformed stored URL */ }
     }
   }
   for (const h of (process.env.ALLOWED_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean)) {

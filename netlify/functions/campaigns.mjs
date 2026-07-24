@@ -119,7 +119,8 @@ function normalizeTranslations(input) {
       if (v && typeof v === 'object') {
         const title = String(v.title || '').trim();
         const description = String(v.description || '').trim();
-        if (title || description) out[code] = { title, description };
+        const landingPageUrl = isValidUrl(v.landingPageUrl) ? String(v.landingPageUrl).trim() : '';
+        if (title || description || landingPageUrl) out[code] = { title, description, landingPageUrl };
       }
     }
   }
