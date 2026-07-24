@@ -1,0 +1,16 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# Netlify Functions v2 declare their own routes via `export const config = { path }`,
+# so no manual redirect rules are needed for the API, /asset/:id, or /s/:code.
+
+[functions]
+  node_bundler = "esbuild"
+
+# SPA-style fallback for the marketing library (client handles unknown paths).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  # Functions and static assets are matched before this catch-all.

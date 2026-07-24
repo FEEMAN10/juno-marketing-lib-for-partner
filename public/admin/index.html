@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Juno Markets · Campaign Admin</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23e3b341'/%3E%3Ctext x='50' y='68' font-size='60' font-family='Arial' font-weight='bold' text-anchor='middle' fill='%232a1e02'%3EJ%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand__mark">J</div>
+      <div class="brand__name">Juno Markets<small>Campaign Admin</small></div>
+    </div>
+    <div class="row" style="align-items:center">
+      <a class="header-link" href="/">← Partner view</a>
+      <button class="header-link" id="logoutBtn" hidden>Log out</button>
+    </div>
+  </header>
+
+  <!-- Login gate -->
+  <main class="wrap" id="loginView">
+    <div class="panel login-card">
+      <div class="panel__head"><h2>Admin sign in</h2></div>
+      <div class="panel__body">
+        <p class="muted" style="margin-top:0">Enter the admin key to manage campaigns.</p>
+        <label class="field">
+          <span><b>Admin key</b></span>
+          <input type="password" id="keyInput" placeholder="ADMIN_PASSWORD" autocomplete="current-password" />
+        </label>
+        <button class="btn btn--primary" id="loginBtn" style="width:100%">Unlock</button>
+        <div id="loginErr" class="hint" style="color:var(--red)"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Admin app -->
+  <main class="wrap" id="adminView" hidden>
+    <div class="hero">
+      <div class="eyebrow">Campaign management</div>
+      <h1>Campaigns</h1>
+      <p>Create the campaigns partners can promote. Each needs a landing page URL, a utm_campaign value, and at minimum a 9:16 portrait key visual.</p>
+    </div>
+
+    <div class="admin-grid">
+      <!-- Editor -->
+      <section class="panel">
+        <div class="panel__head">
+          <h2 id="editorTitle">New campaign</h2>
+        </div>
+        <div class="panel__body">
+          <form id="campForm">
+            <input type="hidden" id="campId" />
+            <label class="field">
+              <span><b>Campaign title</b> <span class="req">*</span></span>
+              <input type="text" id="fTitle" placeholder="Trading Gold 24/7" required />
+            </label>
+            <label class="field">
+              <span><b>Landing page URL</b> <span class="req">*</span></span>
+              <input type="url" id="fLanding" placeholder="http://juno-promo.com/id/trading-gold-24-7" required />
+              <div class="hint">The base landing page. Don’t include refercode or UTM params — those are added automatically.</div>
+            </label>
+            <label class="field">
+              <span><b>utm_campaign</b> <span class="req">*</span></span>
+              <input type="text" id="fUtm" placeholder="trading-gold-24-7" required />
+              <div class="hint">Lowercase, hyphenated. Used as <span class="mono">utm_campaign=…</span> in every partner link.</div>
+            </label>
+            <label class="field">
+              <span><b>Short description</b></span>
+              <textarea id="fDesc" placeholder="One line partners see under the campaign name."></textarea>
+            </label>
+            <label class="field">
+              <span><b>Status</b></span>
+              <select id="fStatus">
+                <option value="published">Published (visible to partners)</option>
+                <option value="draft">Draft (hidden)</option>
+              </select>
+            </label>
+
+            <div class="divider"></div>
+            <span class="eyebrow">Key visuals</span>
+            <p class="hint" style="margin-top:6px">Upload one image per aspect ratio you want available. <b>9:16 is required.</b> JPG / PNG / WebP, up to 15 MB.</p>
+            <div class="visual-slots" id="slots"></div>
+
+            <div class="divider"></div>
+            <div class="btn-row">
+              <button type="submit" class="btn btn--primary" id="saveBtn">Save campaign</button>
+              <button type="button" class="btn btn--ghost" id="resetBtn">Clear form</button>
+            </div>
+            <div class="hint" id="formErr" style="color:var(--red)"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- List -->
+      <section class="panel">
+        <div class="panel__head list-head" style="border-bottom:1px solid var(--border-soft)">
+          <h2 style="margin:0">Existing campaigns</h2>
+          <button class="btn btn--sm btn--ghost" id="refreshBtn">↻ Refresh</button>
+        </div>
+        <div class="panel__body">
+          <div id="adminList" class="camp-list" style="max-height:none">
+            <div class="empty"><span class="spinner"></span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+  <script src="/assets/js/admin.js"></script>
+</body>
+</html>
