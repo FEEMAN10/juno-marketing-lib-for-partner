@@ -63,6 +63,14 @@
   }
 
   /* -------------------- Rendering -------------------- */
+  // Campaign title/description in the current language, falling back to English.
+  function localized(c, field) {
+    const lang = window.I18N.current();
+    const tr = c.translations && c.translations[lang];
+    if (tr && tr[field] && String(tr[field]).trim()) return tr[field];
+    return c[field] || '';
+  }
+
   function render9x16(campaign) {
     const v = (campaign.visuals || []).find((x) => x.ratio === '9:16') || (campaign.visuals || [])[0];
     return v ? v.url : '';
@@ -83,8 +91,8 @@
       btn.innerHTML = `
         ${thumb ? `<img class="camp-thumb" src="${thumb}" alt="" loading="lazy" />` : '<div class="camp-thumb"></div>'}
         <div class="camp-meta">
-          <strong>${escapeHtml(c.title)}</strong>
-          <span>${escapeHtml(c.description || 'utm_campaign: ' + c.utmCampaign)}</span>
+          <strong>${escapeHtml(localized(c, 'title'))}</strong>
+          <span>${escapeHtml(localized(c, 'description') || 'utm_campaign: ' + c.utmCampaign)}</span>
         </div>`;
       btn.addEventListener('click', () => selectCampaign(c));
       els.campList.appendChild(btn);
@@ -106,7 +114,7 @@
   function updateBuilderTitle() {
     if (!state.selected) return;
     els.builderTitle.removeAttribute('data-i18n');
-    els.builderTitle.textContent = `${t('promo_link_prefix')} · ${state.selected.title}`;
+    els.builderTitle.textContent = `${t('promo_link_prefix')} · ${localized(state.selected, 'title')}`;
   }
 
   function renderCreatives(c) {
@@ -121,7 +129,7 @@
       card.className = 'creative';
       const safeName = `juno-${c.utmCampaign}-${v.ratio.replace(':', 'x')}`;
       card.innerHTML = `
-        <div class="creative__imgwrap"><img src="${v.url}" alt="${escapeHtml(c.title)} ${v.ratio}" loading="lazy" /></div>
+        <div class="creative__imgwrap"><img src="${v.url}" alt="${escapeHtml(localized(c, 'title'))} ${v.ratio}" loading="lazy" /></div>
         <div class="creative__bar">
           <span class="ratio-tag">${v.ratio}</span>
           <div class="creative__actions">

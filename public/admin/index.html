@@ -61,10 +61,21 @@
         <div class="panel__body">
           <form id="campForm">
             <input type="hidden" id="campId" />
+
+            <span class="eyebrow">Campaign content</span>
+            <p class="hint" style="margin-top:6px" id="contentHint">Title and description partners see. English is required; other languages are optional and fall back to English.</p>
+            <div class="lang-tabs" id="langTabs"></div>
             <label class="field">
-              <span><b>Campaign title</b> <span class="req">*</span></span>
-              <input type="text" id="fTitle" placeholder="Trading Gold 24/7" required />
+              <span><b>Campaign title</b> <span class="req" id="titleReq">*</span></span>
+              <input type="text" id="fTitle" placeholder="Trading Gold 24/7" />
             </label>
+            <label class="field">
+              <span><b>Short description</b></span>
+              <textarea id="fDesc" placeholder="One line partners see under the campaign name."></textarea>
+            </label>
+
+            <div class="divider"></div>
+
             <label class="field">
               <span><b>Landing page URL</b> <span class="req">*</span></span>
               <input type="url" id="fLanding" placeholder="http://juno-promo.com/id/trading-gold-24-7" required />
@@ -74,10 +85,6 @@
               <span><b>utm_campaign</b> <span class="req">*</span></span>
               <input type="text" id="fUtm" placeholder="trading-gold-24-7" required />
               <div class="hint">Lowercase, hyphenated. Used as <span class="mono">utm_campaign=…</span> in every partner link.</div>
-            </label>
-            <label class="field">
-              <span><b>Short description</b></span>
-              <textarea id="fDesc" placeholder="One line partners see under the campaign name."></textarea>
             </label>
             <label class="field">
               <span><b>Status</b></span>

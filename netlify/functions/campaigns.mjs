@@ -1,6 +1,8 @@
 import { readCatalog, writeCatalog, json, requireAdmin, slug } from '../lib/util.mjs';
 
 const RATIOS = ['9:16', '4:5', '1:1', '16:9', '1.91:1'];
+// English lives in the top-level title/description; these are optional overrides.
+const CONTENT_LANGS = ['ru', 'th', 'id', 'ar', 'zh'];
 
 /**
  * /api/campaigns
@@ -55,6 +57,7 @@ export default async (req) => {
         ...list[idx],
         title: String(body.title).trim(),
         description: String(body.description || '').trim(),
+        translations: normalizeTranslations(body.translations),
         landingPageUrl: String(body.landingPageUrl).trim(),
         utmCampaign: slug(body.utmCampaign),
         status: body.status === 'draft' ? 'draft' : 'published',
@@ -69,6 +72,7 @@ export default async (req) => {
       id: crypto.randomUUID(),
       title: String(body.title).trim(),
       description: String(body.description || '').trim(),
+      translations: normalizeTranslations(body.translations),
       landingPageUrl: String(body.landingPageUrl).trim(),
       utmCampaign: slug(body.utmCampaign),
       status: body.status === 'draft' ? 'draft' : 'published',
@@ -103,6 +107,23 @@ function normalizeVisuals(input) {
       filename: v.filename || '',
       contentType: v.contentType || '',
     }));
+}
+
+// Optional per-language title/description overrides. English is the base
+// (top-level title/description); only non-empty language entries are stored.
+function normalizeTranslations(input) {
+  const out = {};
+  if (input && typeof input === 'object') {
+    for (const code of CONTENT_LANGS) {
+      const v = input[code];
+      if (v && typeof v === 'object') {
+        const title = String(v.title || '').trim();
+        const description = String(v.description || '').trim();
+        if (title || description) out[code] = { title, description };
+      }
+    }
+  }
+  return out;
 }
 
 function isValidUrl(u) {

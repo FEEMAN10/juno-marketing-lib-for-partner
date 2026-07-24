@@ -8,11 +8,24 @@
     { ratio: '1.91:1', dims: '1200 × 628', required: false },
   ];
 
+  // Campaign content languages. 'en' is the base (required); others optional.
+  const CONTENT_LANGS = [
+    { code: 'en', label: 'English', base: true, rtl: false },
+    { code: 'ru', label: 'Русский', rtl: false },
+    { code: 'th', label: 'ไทย', rtl: false },
+    { code: 'id', label: 'Bahasa Indonesia', rtl: false },
+    { code: 'ar', label: 'العربية', rtl: true },
+    { code: 'zh', label: '简体中文', rtl: false },
+  ];
+
   const KEY_STORAGE = 'juno_admin_key';
   const $ = (id) => document.getElementById(id);
   let adminKey = sessionStorage.getItem(KEY_STORAGE) || '';
   // visuals[ratio] = { assetId, url, filename, contentType }
   let visuals = {};
+  // content[lang] = { title, description }  (lang === 'en' is the base)
+  let content = {};
+  let activeLang = 'en';
 
   /* -------------------- API -------------------- */
   function authHeaders(extra = {}) {
@@ -47,6 +60,7 @@
     $('loginView').hidden = true;
     $('adminView').hidden = false;
     $('logoutBtn').hidden = false;
+    resetContent();
     renderSlots();
     loadCampaigns();
   }
@@ -55,6 +69,67 @@
     sessionStorage.removeItem(KEY_STORAGE);
     adminKey = '';
     location.reload();
+  }
+
+  /* -------------------- Content languages (title + description) -------------------- */
+  function emptyContent() {
+    const c = {};
+    CONTENT_LANGS.forEach((l) => { c[l.code] = { title: '', description: '' }; });
+    return c;
+  }
+
+  function resetContent() {
+    content = emptyContent();
+    activeLang = 'en';
+    renderLangTabs();
+    loadLangIntoInputs('en');
+  }
+
+  function langHasContent(code) {
+    const v = content[code];
+    return !!(v && (v.title.trim() || v.description.trim()));
+  }
+
+  function renderLangTabs() {
+    const wrap = $('langTabs');
+    wrap.innerHTML = '';
+    CONTENT_LANGS.forEach((l) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'lang-tab' + (l.code === activeLang ? ' active' : '');
+      const filled = l.base || langHasContent(l.code);
+      btn.innerHTML = `${escapeHtml(l.label)}${filled && l.code !== 'en' ? '<span class="dot"></span>' : ''}`;
+      btn.addEventListener('click', () => switchLang(l.code));
+      wrap.appendChild(btn);
+    });
+  }
+
+  function stashInputsToActive() {
+    content[activeLang] = { title: $('fTitle').value, description: $('fDesc').value };
+  }
+
+  function loadLangIntoInputs(code) {
+    const meta = CONTENT_LANGS.find((l) => l.code === code);
+    const v = content[code] || { title: '', description: '' };
+    $('fTitle').value = v.title;
+    $('fDesc').value = v.description;
+    // English is required; other languages fall back to it.
+    $('titleReq').style.display = code === 'en' ? '' : 'none';
+    const dir = meta && meta.rtl ? 'rtl' : 'ltr';
+    $('fTitle').dir = dir;
+    $('fDesc').dir = dir;
+    $('contentHint').textContent =
+      code === 'en'
+        ? 'Title and description partners see. English is required; other languages are optional and fall back to English.'
+        : `Optional ${meta ? meta.label : code} translation. Leave blank to fall back to English.`;
+  }
+
+  function switchLang(code) {
+    if (code === activeLang) return;
+    stashInputsToActive();
+    activeLang = code;
+    loadLangIntoInputs(code);
+    renderLangTabs();
   }
 
   /* -------------------- Visual slots -------------------- */
@@ -167,11 +242,23 @@
 
   function editCampaign(c) {
     $('campId').value = c.id;
-    $('fTitle').value = c.title;
     $('fLanding').value = c.landingPageUrl;
     $('fUtm').value = c.utmCampaign;
-    $('fDesc').value = c.description || '';
     $('fStatus').value = c.status;
+
+    // Load per-language content: English from the base fields, others from translations.
+    content = emptyContent();
+    content.en = { title: c.title || '', description: c.description || '' };
+    const tr = c.translations || {};
+    CONTENT_LANGS.forEach((l) => {
+      if (l.code !== 'en' && tr[l.code]) {
+        content[l.code] = { title: tr[l.code].title || '', description: tr[l.code].description || '' };
+      }
+    });
+    activeLang = 'en';
+    renderLangTabs();
+    loadLangIntoInputs('en');
+
     visuals = {};
     (c.visuals || []).forEach((v) => { visuals[v.ratio] = v; });
     $('editorTitle').textContent = 'Edit campaign';
@@ -183,6 +270,7 @@
     $('campForm').reset();
     $('campId').value = '';
     visuals = {};
+    resetContent();
     $('editorTitle').textContent = 'New campaign';
     $('formErr').textContent = '';
     renderSlots();
@@ -203,17 +291,34 @@
   async function saveCampaign(e) {
     e.preventDefault();
     $('formErr').textContent = '';
+    stashInputsToActive(); // capture whatever language is currently in the inputs
+
+    if (!content.en.title.trim()) {
+      $('formErr').textContent = 'An English campaign title is required.';
+      switchLang('en');
+      return;
+    }
     if (!visuals['9:16']) {
       $('formErr').textContent = 'A 9:16 portrait key visual is required.';
       return;
     }
+
+    const translations = {};
+    CONTENT_LANGS.forEach((l) => {
+      if (l.code === 'en') return;
+      const title = content[l.code].title.trim();
+      const description = content[l.code].description.trim();
+      if (title || description) translations[l.code] = { title, description };
+    });
+
     const id = $('campId').value;
     const payload = {
       id: id || undefined,
-      title: $('fTitle').value.trim(),
+      title: content.en.title.trim(),
+      description: content.en.description.trim(),
+      translations,
       landingPageUrl: $('fLanding').value.trim(),
       utmCampaign: $('fUtm').value.trim(),
-      description: $('fDesc').value.trim(),
       status: $('fStatus').value,
       visuals: Object.entries(visuals).map(([ratio, v]) => ({ ratio, ...v })),
     };
