@@ -16,27 +16,38 @@
     <div class="brand">
       <img class="brand__logo" src="/assets/img/juno-logo.png" alt="Juno Markets" />
       <span class="brand__sep"></span>
-      <span class="brand__sub">Partner Marketing Library</span>
+      <span class="brand__sub" data-i18n="brand_sub">Partner Marketing Library</span>
+    </div>
+    <div class="lang-picker">
+      <svg class="lang-globe" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
+      <select id="langSelect" class="lang-select" aria-label="Language / Язык / ภาษา / Bahasa / اللغة / 语言">
+        <option value="en">English</option>
+        <option value="ru">Русский</option>
+        <option value="th">ไทย</option>
+        <option value="id">Bahasa Indonesia</option>
+        <option value="ar">العربية</option>
+        <option value="zh">简体中文</option>
+      </select>
     </div>
   </header>
 
   <main class="wrap">
     <div class="hero">
-      <div class="eyebrow">Grow your referrals</div>
-      <h1>Build your tracked promo link in seconds</h1>
-      <p>Pick a campaign, drop in your referral code, and we’ll generate a fully tracked link plus ready-to-post creatives. Share it anywhere and start earning.</p>
+      <div class="eyebrow" data-i18n="hero_eyebrow">Grow your referrals</div>
+      <h1 data-i18n="hero_title">Build your tracked promo link in seconds</h1>
+      <p data-i18n="hero_desc">Pick a campaign, drop in your referral code, and we’ll generate a fully tracked link plus ready-to-post creatives. Share it anywhere and start earning.</p>
     </div>
 
     <div class="layout">
       <!-- Step 1: campaign selection -->
       <section class="panel">
         <div class="panel__head">
-          <div class="step">Step 1</div>
-          <h2>Choose a campaign</h2>
+          <div class="step" data-i18n="step1">Step 1</div>
+          <h2 data-i18n="choose_campaign">Choose a campaign</h2>
         </div>
         <div class="panel__body">
           <div id="campList" class="camp-list" aria-label="Campaign list">
-            <div class="empty"><span class="spinner"></span><br /><br />Loading campaigns…</div>
+            <div class="empty"><span class="spinner"></span><br /><br /><span data-i18n="loading_campaigns">Loading campaigns…</span></div>
           </div>
         </div>
       </section>
@@ -45,39 +56,39 @@
       <section class="stack">
         <div class="panel" id="builderPanel" hidden>
           <div class="panel__head">
-            <div class="step">Step 2</div>
-            <h2 id="builderTitle">Your promo link</h2>
+            <div class="step" data-i18n="step2">Step 2</div>
+            <h2 id="builderTitle" data-i18n="builder_title_default">Your promo link</h2>
           </div>
           <div class="panel__body">
             <label class="field">
-              <span><b>Your referral code</b> <span class="req">*</span></span>
-              <input type="text" id="referInput" placeholder="e.g. T3s71B" autocomplete="off" spellcheck="false" />
-              <div class="hint">This is your unique partner code. It’s added to the link so your clients are tracked to you.</div>
+              <span><b data-i18n="referral_label">Your referral code</b> <span class="req">*</span></span>
+              <input type="text" id="referInput" data-i18n-ph="referral_ph" placeholder="e.g. T3s71B" autocomplete="off" spellcheck="false" dir="ltr" />
+              <div class="hint" data-i18n="referral_hint">This is your unique partner code. It’s added to the link so your clients are tracked to you.</div>
             </label>
 
             <div class="divider"></div>
 
-            <span class="eyebrow">Your tracked link</span>
+            <span class="eyebrow" data-i18n="tracked_link">Your tracked link</span>
             <div style="height:8px"></div>
             <div class="url-box">
-              <code id="finalUrl">Enter your referral code above…</code>
-              <button class="icon-btn" id="copyUrlBtn" title="Copy link" aria-label="Copy link">⧉</button>
+              <code id="finalUrl" data-i18n="enter_code_placeholder">Enter your referral code above…</code>
+              <button class="icon-btn" id="copyUrlBtn" data-i18n-title="copy_link_title" title="Copy link" aria-label="Copy link">⧉</button>
             </div>
             <div class="hint" id="utmHint"></div>
 
             <div style="height:14px"></div>
             <div class="btn-row">
-              <button class="btn btn--sm" id="shortenBtn">🔗 Create short link</button>
-              <a class="btn btn--sm btn--ghost" id="testLink" href="#" target="_blank" rel="noopener">↗ Preview landing page</a>
+              <button class="btn btn--sm" id="shortenBtn"><span aria-hidden="true">🔗</span> <span data-i18n="create_short">Create short link</span></button>
+              <a class="btn btn--sm btn--ghost" id="testLink" href="#" target="_blank" rel="noopener"><span aria-hidden="true">↗</span> <span data-i18n="preview_landing">Preview landing page</span></a>
             </div>
 
             <div id="shortWrap" hidden>
               <div style="height:14px"></div>
-              <span class="eyebrow">Short link</span>
+              <span class="eyebrow" data-i18n="short_link">Short link</span>
               <div style="height:8px"></div>
               <div class="url-box">
                 <code id="shortUrl"></code>
-                <button class="icon-btn" id="copyShortBtn" title="Copy short link" aria-label="Copy short link">⧉</button>
+                <button class="icon-btn" id="copyShortBtn" data-i18n-title="copy_short_title" title="Copy short link" aria-label="Copy short link">⧉</button>
               </div>
             </div>
           </div>
@@ -85,11 +96,11 @@
 
         <div class="panel" id="creativesPanel" hidden>
           <div class="panel__head">
-            <div class="step">Step 3</div>
-            <h2>Campaign creatives</h2>
+            <div class="step" data-i18n="step3">Step 3</div>
+            <h2 data-i18n="campaign_creatives">Campaign creatives</h2>
           </div>
           <div class="panel__body">
-            <p class="muted" style="margin-top:0">Ready-made key visuals from the Juno team. Download, share, or copy to post on your channels.</p>
+            <p class="muted" style="margin-top:0" data-i18n="creatives_desc">Ready-made key visuals from the Juno team. Download, share, or copy to post on your channels.</p>
             <div id="creativesGrid" class="creatives-grid"></div>
           </div>
         </div>
@@ -98,7 +109,7 @@
           <div class="panel__body">
             <div class="empty">
               <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v12H5.2L4 17.2V4z"/><path d="M8 9h8M8 12h5"/></svg>
-              <div>Select a campaign on the left to build your promo link and grab creatives.</div>
+              <div data-i18n="select_campaign_hint">Select a campaign to build your promo link and grab creatives.</div>
             </div>
           </div>
         </div>
@@ -107,6 +118,7 @@
   </main>
 
   <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+  <script src="/assets/js/i18n.js"></script>
   <script src="/assets/js/app.js"></script>
 </body>
 </html>

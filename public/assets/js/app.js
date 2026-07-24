@@ -1,6 +1,7 @@
 /* Juno Markets — Partner Marketing Library (public app) */
 (() => {
   const UTM = { source: 'partners', medium: 'landing-page' };
+  const t = (k) => window.I18N.t(k);
 
   const state = { campaigns: [], selected: null, refer: '' };
 
@@ -22,6 +23,7 @@
     testLink: $('testLink'),
     creativesGrid: $('creativesGrid'),
     toasts: $('toasts'),
+    langSelect: $('langSelect'),
   };
 
   /* -------------------- URL building -------------------- */
@@ -32,7 +34,6 @@
     } catch {
       return '';
     }
-    // Preserve any params already on the landing page, but force our known keys.
     const preserved = new URLSearchParams(u.search);
     ['refercode', 'utm_source', 'utm_medium', 'utm_campaign'].forEach((k) => preserved.delete(k));
 
@@ -53,10 +54,11 @@
     state.refer = refer;
     const url = buildUrl(state.selected, refer);
     els.finalUrl.textContent = url || 'Invalid landing page URL';
+    els.finalUrl.removeAttribute('data-i18n'); // now shows a real URL, not the placeholder
     els.testLink.href = url || '#';
+    // UTM params are literal query keys — kept as-is across languages.
     els.utmHint.innerHTML =
       `utm_source=<b>${UTM.source}</b> · utm_medium=<b>${UTM.medium}</b> · utm_campaign=<b>${escapeHtml(state.selected.utmCampaign)}</b>`;
-    // Reset any previously generated short link when inputs change.
     els.shortWrap.hidden = true;
   }
 
@@ -69,7 +71,7 @@
   function renderCampaignList() {
     if (!state.campaigns.length) {
       els.campList.innerHTML =
-        '<div class="empty">No campaigns published yet.<br /><span class="muted">Check back soon.</span></div>';
+        `<div class="empty">${escapeHtml(t('no_campaigns'))}<br /><span class="muted">${escapeHtml(t('check_back'))}</span></div>`;
       return;
     }
     els.campList.innerHTML = '';
@@ -95,16 +97,22 @@
     els.welcomePanel.hidden = true;
     els.builderPanel.hidden = false;
     els.creativesPanel.hidden = false;
-    els.builderTitle.textContent = `Promo link · ${c.title}`;
+    updateBuilderTitle();
     refreshUrl();
     renderCreatives(c);
     els.builderPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function updateBuilderTitle() {
+    if (!state.selected) return;
+    els.builderTitle.removeAttribute('data-i18n');
+    els.builderTitle.textContent = `${t('promo_link_prefix')} · ${state.selected.title}`;
+  }
+
   function renderCreatives(c) {
     const visuals = c.visuals || [];
     if (!visuals.length) {
-      els.creativesGrid.innerHTML = '<div class="empty">No creatives uploaded for this campaign yet.</div>';
+      els.creativesGrid.innerHTML = `<div class="empty">${escapeHtml(t('no_creatives'))}</div>`;
       return;
     }
     els.creativesGrid.innerHTML = '';
@@ -117,9 +125,9 @@
         <div class="creative__bar">
           <span class="ratio-tag">${v.ratio}</span>
           <div class="creative__actions">
-            <button class="mini-btn" data-act="download" title="Download">⭳</button>
-            <button class="mini-btn" data-act="copy" title="Copy image">⧉</button>
-            <button class="mini-btn" data-act="share" title="Share">↗</button>
+            <button class="mini-btn" data-act="download" title="${escapeHtml(t('act_download'))}">⭳</button>
+            <button class="mini-btn" data-act="copy" title="${escapeHtml(t('act_copy_img'))}">⧉</button>
+            <button class="mini-btn" data-act="share" title="${escapeHtml(t('act_share'))}">↗</button>
           </div>
         </div>`;
       card.querySelector('[data-act="download"]').addEventListener('click', () => downloadImage(v.url, safeName));
@@ -147,22 +155,21 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      toast('Image downloaded');
+      toast(t('toast_downloaded'));
     } catch {
-      toast('Could not download image', true);
+      toast(t('toast_download_fail'), true);
     }
   }
 
   async function copyImage(url) {
     try {
       const blob = await fetchBlob(url);
-      // Clipboard image support is limited to PNG in most browsers.
       let toCopy = blob;
       if (blob.type !== 'image/png') toCopy = await toPng(blob);
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': toCopy })]);
-      toast('Image copied to clipboard');
+      toast(t('toast_img_copied'));
     } catch {
-      toast('Copy not supported here — try Download', true);
+      toast(t('toast_copy_unsupported'), true);
     }
   }
 
@@ -199,7 +206,7 @@
         await navigator.share({ title: campaign.title, text: campaign.title, url: link });
       } else {
         await navigator.clipboard.writeText(link);
-        toast('Link copied — paste it into your post');
+        toast(t('toast_link_copied_share'));
       }
     } catch {
       /* user cancelled */
@@ -210,9 +217,9 @@
   async function copyText(text, msg) {
     try {
       await navigator.clipboard.writeText(text);
-      toast(msg || 'Copied');
+      toast(msg);
     } catch {
-      toast('Copy failed', true);
+      toast(t('toast_copy_fail'), true);
     }
   }
 
@@ -220,7 +227,7 @@
     if (!state.selected) return;
     const refer = els.referInput.value.trim();
     if (!refer) {
-      toast('Enter your referral code first', true);
+      toast(t('toast_enter_code'), true);
       els.referInput.focus();
       return;
     }
@@ -228,7 +235,7 @@
     const btn = els.shortenBtn;
     const original = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Creating…';
+    btn.innerHTML = `<span class="spinner"></span> ${escapeHtml(t('creating'))}`;
     try {
       const res = await fetch('/api/shorten', {
         method: 'POST',
@@ -239,9 +246,9 @@
       if (!res.ok) throw new Error(data.error || 'Failed');
       els.shortUrl.textContent = data.shortUrl;
       els.shortWrap.hidden = false;
-      toast('Short link created');
-    } catch (e) {
-      toast(e.message || 'Could not create short link', true);
+      toast(t('toast_short_created'));
+    } catch {
+      toast(t('toast_short_fail'), true);
     } finally {
       btn.disabled = false;
       btn.innerHTML = original;
@@ -249,20 +256,29 @@
   }
 
   /* -------------------- Toast + utils -------------------- */
-  let toastTimer;
   function toast(msg, isErr) {
-    const t = document.createElement('div');
-    t.className = 'toast' + (isErr ? ' err' : '');
-    t.textContent = msg;
-    els.toasts.appendChild(t);
-    clearTimeout(toastTimer);
-    setTimeout(() => t.remove(), 2600);
+    const el = document.createElement('div');
+    el.className = 'toast' + (isErr ? ' err' : '');
+    el.textContent = msg;
+    els.toasts.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
   }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
     );
+  }
+
+  /* -------------------- i18n wiring -------------------- */
+  function onLangChange() {
+    // Re-render anything produced by JS (static [data-i18n] nodes are handled by I18N.apply).
+    renderCampaignList();
+    if (state.selected) {
+      updateBuilderTitle();
+      renderCreatives(state.selected);
+    }
+    if (els.langSelect.value !== window.I18N.current()) els.langSelect.value = window.I18N.current();
   }
 
   /* -------------------- Boot -------------------- */
@@ -278,9 +294,14 @@
   }
 
   els.referInput.addEventListener('input', refreshUrl);
-  els.copyUrlBtn.addEventListener('click', () => copyText(els.finalUrl.textContent, 'Link copied'));
-  els.copyShortBtn.addEventListener('click', () => copyText(els.shortUrl.textContent, 'Short link copied'));
+  els.copyUrlBtn.addEventListener('click', () => copyText(els.finalUrl.textContent, t('toast_link_copied')));
+  els.copyShortBtn.addEventListener('click', () => copyText(els.shortUrl.textContent, t('toast_short_copied')));
   els.shortenBtn.addEventListener('click', createShortLink);
+  els.langSelect.addEventListener('change', (e) => window.I18N.apply(e.target.value));
+
+  window.I18N.onChange(onLangChange);
+  window.I18N.init(); // sets language from storage/browser and translates static nodes
+  els.langSelect.value = window.I18N.current();
 
   load();
 })();

@@ -73,6 +73,25 @@ a { color: var(--brand-dark); }
 }
 .header-link:hover { color: var(--brand); border-color: var(--brand); }
 
+/* Language picker */
+.lang-picker {
+  display: flex; align-items: center; gap: 6px; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 999px; padding: 5px 8px 5px 12px;
+  background: #fff; transition: 0.15s;
+}
+.lang-picker:hover { border-color: var(--brand); color: var(--brand); }
+.lang-globe { flex: 0 0 auto; }
+.lang-select {
+  border: none; background: transparent; color: var(--text); font: inherit;
+  font-size: 13px; font-weight: 600; padding: 2px 4px; cursor: pointer; outline: none;
+}
+
+/* Keep URLs / technical strings left-to-right, even under RTL layouts */
+.url-box { direction: ltr; }
+#utmHint { direction: ltr; }
+[dir="rtl"] #utmHint { text-align: right; }
+[dir="rtl"] .camp-item { text-align: right; }
+
 .wrap { max-width: 1200px; margin: 0 auto; padding: clamp(20px, 4vw, 40px); }
 
 .hero { margin-bottom: 28px; }
