@@ -173,29 +173,86 @@
     });
   }
 
-  function fileToBase64(file) {
+  function fileToBase64(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result).split(',')[1]);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(blob);
     });
+  }
+
+  /* Netlify sync functions reject request bodies over ~6 MB (HTTP 413), and we
+   * upload images base64-encoded (~+33%). So large images are downscaled and
+   * recompressed in the browser first to keep the payload comfortably under
+   * that limit. Small originals are sent untouched for best fidelity. */
+  const UPLOAD_TARGET_BYTES = 3.8 * 1024 * 1024; // raw bytes before base64
+  const UPLOAD_MAX_EDGE = 2000; // px — plenty for social creatives (9:16 ≈ 1080×1920)
+
+  function loadImageEl(blob) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read this image file')); };
+      img.src = url;
+    });
+  }
+  function canvasToBlob(canvas, type, quality) {
+    return new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Image encode failed'))), type, quality));
+  }
+  function canvasHasAlpha(ctx, w, h) {
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const step = Math.max(4, Math.floor(data.length / 400000) * 4); // sample for speed
+    for (let i = 3; i < data.length; i += step) if (data[i] < 250) return true;
+    return false;
+  }
+
+  async function prepareImage(file) {
+    if (file.size <= UPLOAD_TARGET_BYTES) {
+      return { blob: file, contentType: file.type, filename: file.name };
+    }
+    const img = await loadImageEl(file);
+    const scale = Math.min(1, UPLOAD_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+
+    // Keep transparency (WebP) only when the source actually has it; else JPEG.
+    const type = /png|webp/i.test(file.type) && canvasHasAlpha(ctx, w, h) ? 'image/webp' : 'image/jpeg';
+    let quality = 0.92;
+    let blob = await canvasToBlob(canvas, type, quality);
+    while (blob.size > UPLOAD_TARGET_BYTES && quality > 0.5) {
+      quality = Math.round((quality - 0.1) * 100) / 100;
+      blob = await canvasToBlob(canvas, type, quality);
+    }
+    const base = file.name.replace(/\.[^.]+$/, '') || 'image';
+    return { blob, contentType: type, filename: `${base}.${type === 'image/webp' ? 'webp' : 'jpg'}` };
   }
 
   async function handleUpload(e, ratio) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) return toast('Image exceeds 15 MB', true);
     const slot = e.target.closest('.slot');
     const btn = slot.querySelector('.slot__btn');
     const label = btn.firstChild.nodeValue;
     btn.firstChild.nodeValue = 'Uploading… ';
     try {
-      const dataBase64 = await fileToBase64(file);
+      const prepared = await prepareImage(file);
+      const dataBase64 = await fileToBase64(prepared.blob);
+      // Final guard: stay under Netlify's ~6 MB request-body limit.
+      if (dataBase64.length > 5.6 * 1024 * 1024) {
+        throw new Error('Image is too large even after optimizing — please resize it and try again.');
+      }
       const data = await api('/api/upload', {
         method: 'POST',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
+        body: JSON.stringify({ filename: prepared.filename, contentType: prepared.contentType, dataBase64 }),
       });
       visuals[ratio] = { assetId: data.assetId, url: data.url, filename: data.filename, contentType: data.contentType };
       renderSlots();
