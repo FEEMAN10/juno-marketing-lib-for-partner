@@ -3,6 +3,17 @@
   const UTM = { source: 'partners', medium: 'landing-page' };
   const t = (k) => window.I18N.t(k);
 
+  // Inline SVGs so the action icons render identically on every device
+  // (the old glyph fonts left the download icon as an empty box on some OSes).
+  const ICONS = {
+    download:
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>',
+    copy:
+      '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+    share:
+      '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>',
+  };
+
   const state = { campaigns: [], selected: null, refer: '' };
 
   const $ = (id) => document.getElementById(id);
@@ -135,9 +146,9 @@
         <div class="creative__bar">
           <span class="ratio-tag">${v.ratio}</span>
           <div class="creative__actions">
-            <button class="mini-btn" data-act="download" title="${escapeHtml(t('act_download'))}">⭳</button>
-            <button class="mini-btn" data-act="copy" title="${escapeHtml(t('act_copy_img'))}">⧉</button>
-            <button class="mini-btn" data-act="share" title="${escapeHtml(t('act_share'))}">↗</button>
+            <button class="mini-btn" data-act="download" data-tip="${escapeHtml(t('act_download'))}" aria-label="${escapeHtml(t('act_download'))}">${ICONS.download}</button>
+            <button class="mini-btn" data-act="copy" data-tip="${escapeHtml(t('act_copy_img'))}" aria-label="${escapeHtml(t('act_copy_img'))}">${ICONS.copy}</button>
+            <button class="mini-btn" data-act="share" data-tip="${escapeHtml(t('act_share'))}" aria-label="${escapeHtml(t('act_share'))}">${ICONS.share}</button>
           </div>
         </div>`;
       card.querySelector('[data-act="download"]').addEventListener('click', () => downloadImage(v.url, safeName));

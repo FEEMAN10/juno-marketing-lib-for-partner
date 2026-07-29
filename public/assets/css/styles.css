@@ -195,12 +195,15 @@ textarea { resize: vertical; min-height: 80px; }
   display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px;
 }
 .creative {
-  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--panel); display: flex; flex-direction: column; box-shadow: var(--shadow-sm);
+  position: relative;
 }
+.creative:hover { z-index: 5; } /* lift so its tooltips sit above neighbouring cards */
 .creative__imgwrap {
   background:
     repeating-conic-gradient(#f0f1f4 0% 25%, #f8f9fb 0% 50%) 50% / 22px 22px;
+  border-radius: var(--radius) var(--radius) 0 0; overflow: hidden;
   display: grid; place-items: center; padding: 14px;
 }
 .creative__imgwrap img { max-width: 100%; max-height: 260px; border-radius: 6px; display: block; box-shadow: 0 8px 24px -12px rgba(17, 24, 39, 0.35); }
@@ -208,11 +211,33 @@ textarea { resize: vertical; min-height: 80px; }
 .ratio-tag { font-size: 12px; font-weight: 800; color: var(--brand); letter-spacing: 0.4px; }
 .creative__actions { display: flex; gap: 6px; }
 .mini-btn {
+  position: relative;
   border: 1px solid var(--border); background: #fff; color: var(--text);
   width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: grid; place-items: center;
   transition: 0.15s; font-size: 14px;
 }
 .mini-btn:hover { border-color: var(--brand); color: var(--brand); }
+.mini-btn svg { display: block; }
+
+/* Language-aware tooltip on the creative action icons */
+.mini-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 9px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #14171f; color: #fff; font-size: 12px; font-weight: 600; line-height: 1.15;
+  white-space: nowrap; padding: 6px 9px; border-radius: 7px;
+  box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.4);
+  opacity: 0; pointer-events: none; transition: opacity 0.14s ease, transform 0.14s ease; z-index: 40;
+}
+.mini-btn[data-tip]::before {
+  content: ''; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #14171f;
+  opacity: 0; pointer-events: none; transition: opacity 0.14s ease; z-index: 40;
+}
+.mini-btn[data-tip]:hover::after,
+.mini-btn[data-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.mini-btn[data-tip]:hover::before,
+.mini-btn[data-tip]:focus-visible::before { opacity: 1; }
 
 /* ---------- Empty / placeholder ---------- */
 .empty { text-align: center; color: var(--muted); padding: 40px 20px; }
