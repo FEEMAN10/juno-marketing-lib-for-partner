@@ -26,6 +26,8 @@
   // content[lang] = { title, description }  (lang === 'en' is the base)
   let content = {};
   let activeLang = 'en';
+  // Set of language codes this campaign is shown to (default: all).
+  let visibleLangs = new Set(CONTENT_LANGS.map((l) => l.code));
 
   /* -------------------- API -------------------- */
   function authHeaders(extra = {}) {
@@ -92,6 +94,28 @@
     activeLang = 'en';
     renderLangTabs();
     loadLangIntoInputs('en');
+    visibleLangs = new Set(CONTENT_LANGS.map((l) => l.code));
+    renderVisibility();
+  }
+
+  /* -------------------- Per-language visibility -------------------- */
+  function renderVisibility() {
+    const wrap = $('langVisibility');
+    wrap.innerHTML = '';
+    CONTENT_LANGS.forEach((l) => {
+      const on = visibleLangs.has(l.code);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vis-chip' + (on ? ' on' : '');
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.innerHTML = `<span class="vis-dot" aria-hidden="true">${on ? '✓' : ''}</span>${escapeHtml(l.label)}`;
+      btn.addEventListener('click', () => {
+        if (visibleLangs.has(l.code)) visibleLangs.delete(l.code);
+        else visibleLangs.add(l.code);
+        renderVisibility();
+      });
+      wrap.appendChild(btn);
+    });
   }
 
   function langHasContent(code) {
@@ -282,8 +306,11 @@
       return;
     }
     list.innerHTML = '';
+    const allCodes = CONTENT_LANGS.map((l) => l.code);
     campaigns.forEach((c) => {
       const thumb = (c.visuals || []).find((v) => v.ratio === '9:16')?.url || (c.visuals || [])[0]?.url;
+      const vis = Array.isArray(c.visibleLanguages) && c.visibleLanguages.length ? c.visibleLanguages : allCodes;
+      const visNote = vis.length < allCodes.length ? ` · 🌐 ${vis.map((x) => x.toUpperCase()).join(' ')}` : '';
       const row = document.createElement('div');
       row.className = 'camp-item';
       row.style.cursor = 'default';
@@ -293,7 +320,7 @@
           <strong>${escapeHtml(c.title)}
             <span class="badge ${c.status === 'published' ? 'badge--live' : 'badge--draft'}">${c.status}</span>
           </strong>
-          <span>${escapeHtml(c.utmCampaign)} · ${(c.visuals || []).length} visual(s)</span>
+          <span>${escapeHtml(c.utmCampaign)} · ${(c.visuals || []).length} visual(s)${escapeHtml(visNote)}</span>
         </div>`;
       const actions = document.createElement('div');
       actions.className = 'row';
@@ -335,6 +362,13 @@
     activeLang = 'en';
     renderLangTabs();
     loadLangIntoInputs('en');
+
+    // Visibility: absent → shown to all languages (backward-compatible).
+    const all = CONTENT_LANGS.map((l) => l.code);
+    visibleLangs = new Set(
+      Array.isArray(c.visibleLanguages) && c.visibleLanguages.length ? c.visibleLanguages : all
+    );
+    renderVisibility();
 
     visuals = {};
     (c.visuals || []).forEach((v) => { visuals[v.ratio] = v; });
@@ -384,6 +418,10 @@
       $('formErr').textContent = 'A 9:16 portrait key visual is required.';
       return;
     }
+    if (visibleLangs.size === 0) {
+      $('formErr').textContent = 'Select at least one language under “Show to languages”.';
+      return;
+    }
 
     const translations = {};
     CONTENT_LANGS.forEach((l) => {
@@ -403,6 +441,7 @@
       translations,
       utmCampaign: $('fUtm').value.trim(),
       status: $('fStatus').value,
+      visibleLanguages: CONTENT_LANGS.map((l) => l.code).filter((c) => visibleLangs.has(c)),
       visuals: Object.entries(visuals).map(([ratio, v]) => ({ ratio, ...v })),
     };
     const btn = $('saveBtn');

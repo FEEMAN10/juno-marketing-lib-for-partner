@@ -89,14 +89,27 @@
     return v ? v.url : '';
   }
 
+  // A campaign is shown only when the current language is in its visibleLanguages
+  // (absent/empty = shown everywhere, backward-compatible).
+  function visibleForLang(c) {
+    const langs = c.visibleLanguages;
+    if (!Array.isArray(langs) || langs.length === 0) return true;
+    return langs.includes(window.I18N.current());
+  }
+
+  function visibleCampaigns() {
+    return state.campaigns.filter(visibleForLang);
+  }
+
   function renderCampaignList() {
-    if (!state.campaigns.length) {
+    const list = visibleCampaigns();
+    if (!list.length) {
       els.campList.innerHTML =
         `<div class="empty">${escapeHtml(t('no_campaigns'))}<br /><span class="muted">${escapeHtml(t('check_back'))}</span></div>`;
       return;
     }
     els.campList.innerHTML = '';
-    state.campaigns.forEach((c) => {
+    list.forEach((c) => {
       const btn = document.createElement('button');
       btn.className = 'camp-item' + (state.selected?.id === c.id ? ' is-active' : '');
       btn.type = 'button';
@@ -293,6 +306,13 @@
 
   /* -------------------- i18n wiring -------------------- */
   function onLangChange() {
+    // A selected campaign may be hidden in the newly-chosen language.
+    if (state.selected && !visibleForLang(state.selected)) {
+      state.selected = null;
+      els.builderPanel.hidden = true;
+      els.creativesPanel.hidden = true;
+      els.welcomePanel.hidden = false;
+    }
     // Re-render anything produced by JS (static [data-i18n] nodes are handled by I18N.apply).
     renderCampaignList();
     if (state.selected) {

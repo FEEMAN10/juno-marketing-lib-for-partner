@@ -295,6 +295,22 @@ textarea { resize: vertical; min-height: 80px; }
 .lang-tab.active { background: var(--brand-tint); border-color: var(--brand); color: var(--brand-dark); }
 .lang-tab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
 
+/* Per-language visibility toggles (admin) */
+.lang-visibility { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.vis-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: #fff; color: var(--muted-2);
+  font: inherit; font-size: 12px; font-weight: 600; padding: 5px 11px 5px 7px;
+  border-radius: 999px; cursor: pointer; transition: 0.15s;
+}
+.vis-chip:hover { border-color: var(--brand); }
+.vis-chip.on { background: var(--brand-tint); border-color: var(--brand); color: var(--brand-dark); }
+.vis-chip .vis-dot {
+  width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border);
+  display: inline-grid; place-items: center; font-size: 10px; line-height: 1; color: #fff; flex: 0 0 auto;
+}
+.vis-chip.on .vis-dot { background: var(--brand); border-color: var(--brand); }
+
 .login-card { max-width: 420px; margin: 12vh auto 0; }
 
 .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }

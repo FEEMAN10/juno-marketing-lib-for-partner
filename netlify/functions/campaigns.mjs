@@ -3,6 +3,8 @@ import { readCatalog, writeCatalog, json, requireAdmin, slug } from '../lib/util
 const RATIOS = ['9:16', '4:5', '1:1', '16:9', '1.91:1'];
 // English lives in the top-level title/description; these are optional overrides.
 const CONTENT_LANGS = ['ru', 'th', 'id', 'ar', 'zh'];
+// Partner-facing languages a campaign can be shown in.
+const VISIBLE_LANGS = ['en', ...CONTENT_LANGS];
 
 /**
  * /api/campaigns
@@ -61,6 +63,7 @@ export default async (req) => {
         landingPageUrl: String(body.landingPageUrl).trim(),
         utmCampaign: slug(body.utmCampaign),
         status: body.status === 'draft' ? 'draft' : 'published',
+        visibleLanguages: normalizeVisibleLanguages(body.visibleLanguages),
         visuals,
         updatedAt: now,
       };
@@ -76,6 +79,7 @@ export default async (req) => {
       landingPageUrl: String(body.landingPageUrl).trim(),
       utmCampaign: slug(body.utmCampaign),
       status: body.status === 'draft' ? 'draft' : 'published',
+      visibleLanguages: normalizeVisibleLanguages(body.visibleLanguages),
       visuals,
       createdAt: now,
       updatedAt: now,
@@ -125,6 +129,14 @@ function normalizeTranslations(input) {
     }
   }
   return out;
+}
+
+// Which partner languages the campaign is shown in. Falls back to all
+// languages when absent/empty so existing campaigns stay visible everywhere.
+function normalizeVisibleLanguages(input) {
+  if (!Array.isArray(input)) return VISIBLE_LANGS.slice();
+  const out = [...new Set(input.filter((l) => VISIBLE_LANGS.includes(l)))];
+  return out.length ? out : VISIBLE_LANGS.slice();
 }
 
 function isValidUrl(u) {
