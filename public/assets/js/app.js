@@ -274,7 +274,7 @@
       const res = await fetch('/api/shorten', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ url: full }),
+        body: JSON.stringify({ url: full, lang: window.I18N.current() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');

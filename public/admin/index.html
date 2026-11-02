@@ -48,10 +48,16 @@
   <main class="wrap" id="adminView" hidden>
     <div class="hero">
       <div class="eyebrow">Campaign management</div>
-      <h1>Campaigns</h1>
-      <p>Create the campaigns partners can promote. Each needs a landing page URL, a utm_campaign value, and at minimum a 9:16 portrait key visual.</p>
+      <h1 id="adminHeading">Campaigns</h1>
+      <p id="adminSubhead">Create the campaigns partners can promote. Each needs a landing page URL, a utm_campaign value, and at minimum a 9:16 portrait key visual.</p>
     </div>
 
+    <div class="admin-nav">
+      <button type="button" class="admin-nav__btn is-active" id="navCampaigns">Campaigns</button>
+      <button type="button" class="admin-nav__btn" id="navAnalytics">📊 Analytics</button>
+    </div>
+
+    <div id="campaignsView">
     <div class="admin-grid">
       <!-- Editor -->
       <section class="panel">
@@ -127,6 +133,19 @@
         </div>
       </section>
     </div>
+    </div>
+
+    <section id="analyticsView" hidden>
+      <div class="panel">
+        <div class="panel__head list-head" style="border-bottom:1px solid var(--border-soft)">
+          <h2 style="margin:0">Short-link clicks</h2>
+          <button class="btn btn--sm btn--ghost" id="refreshAnalytics">↻ Refresh</button>
+        </div>
+        <div class="panel__body" id="analyticsBody">
+          <div class="empty"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div class="toast-wrap" id="toasts" aria-live="polite"></div>

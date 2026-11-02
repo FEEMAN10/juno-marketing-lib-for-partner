@@ -19,7 +19,7 @@ export default async (req) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { url } = body;
+  const { url, lang } = body;
   if (!url) return json({ error: 'url is required' }, 400);
 
   let target;
@@ -58,7 +58,17 @@ export default async (req) => {
     const existing = await store.get(code);
     if (!existing) break;
   }
-  await store.setJSON(code, { url: target.toString(), createdAt: new Date().toISOString() });
+  // Capture the campaign + partner code (from the URL) and the partner's
+  // language so clicks on this link can be attributed later.
+  const campaign = target.searchParams.get('utm_campaign') || '';
+  const refercode = target.searchParams.get('refercode') || '';
+  await store.setJSON(code, {
+    url: target.toString(),
+    campaign,
+    refercode,
+    lang: typeof lang === 'string' ? lang.slice(0, 5) : '',
+    createdAt: new Date().toISOString(),
+  });
 
   const base = (process.env.SHORTLINK_BASE || new URL(req.url).origin).replace(/\/$/, '');
   return json({ code, shortUrl: `${base}/s/${code}` }, 201);

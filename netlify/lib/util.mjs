@@ -12,6 +12,51 @@ export function assetsStore() {
 export function linksStore() {
   return getStore({ name: 'shortlinks', consistency: 'strong' });
 }
+export function analyticsStore() {
+  return getStore({ name: 'analytics', consistency: 'strong' });
+}
+
+/* ------------------------------------------------------------------ *
+ * Click analytics — a single aggregate summary document updated on each
+ * short-link click. Fine for this scale; perfect accuracy isn't required
+ * (a rare concurrent click may be undercounted).
+ * ------------------------------------------------------------------ */
+const SUMMARY_KEY = 'summary';
+
+export function emptySummary() {
+  return { total: 0, firstClickAt: null, lastClickAt: null, campaigns: {}, refercodes: {}, days: {}, langs: {} };
+}
+
+export async function readSummary() {
+  const s = await analyticsStore().get(SUMMARY_KEY, { type: 'json' });
+  return s && typeof s === 'object' ? { ...emptySummary(), ...s } : emptySummary();
+}
+
+export async function recordClick({ campaign, refercode, lang, at }) {
+  const store = analyticsStore();
+  const s = (await store.get(SUMMARY_KEY, { type: 'json' })) || emptySummary();
+  const camp = campaign || '(unknown)';
+  const ref = refercode || '(none)';
+  const lg = lang || 'unknown';
+  const day = at.slice(0, 10);
+
+  s.total = (s.total || 0) + 1;
+  s.firstClickAt = s.firstClickAt || at;
+  s.lastClickAt = at;
+  const bump = (obj, key) => { obj[key] = (obj[key] || 0) + 1; };
+  s.days = s.days || {}; bump(s.days, day);
+  s.refercodes = s.refercodes || {}; bump(s.refercodes, ref);
+  s.langs = s.langs || {}; bump(s.langs, lg);
+  s.campaigns = s.campaigns || {};
+  const c = s.campaigns[camp] || (s.campaigns[camp] = { total: 0, refercodes: {}, days: {}, langs: {} });
+  c.total += 1;
+  bump(c.refercodes, ref);
+  bump(c.days, day);
+  bump(c.langs, lg);
+
+  await store.setJSON(SUMMARY_KEY, s);
+  return s;
+}
 
 /* The whole campaign catalog is stored as a single JSON document.
  * Campaigns are admin-managed and low in volume, so this keeps reads/writes

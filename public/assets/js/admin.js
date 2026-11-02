@@ -300,6 +300,7 @@
   }
 
   function renderList(campaigns) {
+    allCampaigns = campaigns;
     const list = $('adminList');
     if (!campaigns.length) {
       list.innerHTML = '<div class="empty">No campaigns yet. Create your first one on the left.</div>';
@@ -480,7 +481,132 @@
     );
   }
 
+  /* -------------------- View switching + analytics -------------------- */
+  let allCampaigns = [];
+  const LANG_LABEL = { en: 'English', ru: 'Русский', th: 'ไทย', id: 'Bahasa Indonesia', ar: 'العربية', zh: '简体中文', unknown: 'Unknown' };
+
+  function showView(view) {
+    const analytics = view === 'analytics';
+    $('campaignsView').hidden = analytics;
+    $('analyticsView').hidden = !analytics;
+    $('navCampaigns').classList.toggle('is-active', !analytics);
+    $('navAnalytics').classList.toggle('is-active', analytics);
+    $('adminHeading').textContent = analytics ? 'Analytics' : 'Campaigns';
+    $('adminSubhead').textContent = analytics
+      ? 'Clicks on the short links partners create and share. Updated in real time.'
+      : 'Create the campaigns partners can promote. Each needs a landing page URL, a utm_campaign value, and at minimum a 9:16 portrait key visual.';
+    if (analytics) loadAnalytics();
+  }
+
+  async function loadAnalytics() {
+    const body = $('analyticsBody');
+    body.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+    try {
+      const data = await api('/api/analytics', { headers: authHeaders() });
+      renderAnalytics(data.summary || {});
+    } catch (err) {
+      body.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function campaignTitle(slug) {
+    const c = allCampaigns.find((x) => x.utmCampaign === slug);
+    return c ? c.title : slug;
+  }
+
+  function renderAnalytics(s) {
+    const total = s.total || 0;
+    const campaigns = s.campaigns || {};
+    const refercodes = s.refercodes || {};
+    const days = s.days || {};
+    const langs = s.langs || {};
+
+    if (!total) {
+      $('analyticsBody').innerHTML =
+        '<div class="empty">No clicks yet.<br><span class="muted">Clicks appear here once partners create short links and people click them.</span></div>';
+      return;
+    }
+
+    const cards = [
+      ['Total clicks', total.toLocaleString()],
+      ['Campaigns clicked', Object.keys(campaigns).length],
+      ['Partners', Object.keys(refercodes).filter((k) => k !== '(none)').length],
+      ['Last click', s.lastClickAt ? timeAgo(s.lastClickAt) : '—'],
+    ];
+    const cardsHtml = `<div class="stat-row">${cards
+      .map(([l, v]) => `<div class="stat"><div class="stat__val">${escapeHtml(String(v))}</div><div class="stat__label">${escapeHtml(l)}</div></div>`)
+      .join('')}</div>`;
+
+    const series = lastNDays(30).map((d) => ({ d, n: days[d] || 0 }));
+    const maxDay = Math.max(1, ...series.map((x) => x.n));
+    const barsHtml = `
+      <div class="an-block">
+        <div class="an-title">Clicks · last 30 days</div>
+        <div class="bars">${series
+          .map((x) => `<div class="bar" title="${x.d}: ${x.n}"><div class="bar__fill" style="height:${x.n ? Math.max(4, Math.round((x.n / maxDay) * 100)) : 0}%"></div></div>`)
+          .join('')}</div>
+        <div class="bars-x"><span>${series[0].d.slice(5)}</span><span>${series[series.length - 1].d.slice(5)}</span></div>
+      </div>`;
+
+    const campRows = Object.entries(campaigns)
+      .map(([k, v]) => ({ label: campaignTitle(k), sub: k, n: v.total || 0 }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 10);
+    const refRows = Object.entries(refercodes)
+      .map(([k, n]) => ({ label: k, n }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 10);
+    const langRows = Object.entries(langs)
+      .map(([k, n]) => ({ label: LANG_LABEL[k] || k, n }))
+      .sort((a, b) => b.n - a.n);
+
+    $('analyticsBody').innerHTML = `
+      ${cardsHtml}
+      ${barsHtml}
+      <div class="an-cols">${tableBlock('By campaign', campRows, total)}${tableBlock('By partner (refercode)', refRows, total)}</div>
+      ${tableBlock('By language', langRows, total)}
+      <p class="hint">Only short-link clicks (the “Create short link” button → /s/…) are tracked here. Plain copied links go straight to the landing page, where your own site analytics measure them via the UTM tags.</p>`;
+  }
+
+  function tableBlock(title, rows, total) {
+    if (!rows.length) return '';
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    const body = rows
+      .map(
+        (r) => `
+      <div class="an-row">
+        <div class="an-row__label">${escapeHtml(r.label)}${r.sub && r.sub !== r.label ? `<span class="an-row__sub">${escapeHtml(r.sub)}</span>` : ''}</div>
+        <div class="an-row__track"><div class="an-row__fill" style="width:${Math.max(3, Math.round((r.n / max) * 100))}%"></div></div>
+        <div class="an-row__n">${r.n.toLocaleString()}<span class="an-row__pct">${Math.round((r.n / total) * 100)}%</span></div>
+      </div>`
+      )
+      .join('');
+    return `<div class="an-block"><div class="an-title">${escapeHtml(title)}</div>${body}</div>`;
+  }
+
+  function lastNDays(n) {
+    const out = [];
+    const today = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const x = new Date(today);
+      x.setDate(today.getDate() - i);
+      out.push(x.toISOString().slice(0, 10));
+    }
+    return out;
+  }
+  function timeAgo(iso) {
+    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
   /* -------------------- Wire up -------------------- */
+  $('navCampaigns').addEventListener('click', () => showView('campaigns'));
+  $('navAnalytics').addEventListener('click', () => showView('analytics'));
+  $('refreshAnalytics').addEventListener('click', loadAnalytics);
   $('loginBtn').addEventListener('click', async () => {
     const key = $('keyInput').value.trim();
     if (!key) return;
