@@ -21,11 +21,13 @@
   const KEY_STORAGE = 'juno_admin_key';
   const $ = (id) => document.getElementById(id);
   let adminKey = sessionStorage.getItem(KEY_STORAGE) || '';
-  // visuals[ratio] = { assetId, url, filename, contentType }
-  let visuals = {};
+  // visualsByLang[lang][ratio] = { assetId, url, filename, contentType }
+  // 'en' is the base set; other languages fall back to it when empty.
+  let visualsByLang = {};
   // content[lang] = { title, description }  (lang === 'en' is the base)
   let content = {};
   let activeLang = 'en';
+  const curVisuals = () => (visualsByLang[activeLang] || (visualsByLang[activeLang] = {}));
   // Set of language codes this campaign is shown to (default: all).
   let visibleLangs = new Set(CONTENT_LANGS.map((l) => l.code));
 
@@ -91,9 +93,11 @@
 
   function resetContent() {
     content = emptyContent();
+    visualsByLang = {};
     activeLang = 'en';
     renderLangTabs();
     loadLangIntoInputs('en');
+    renderSlots();
     visibleLangs = new Set(CONTENT_LANGS.map((l) => l.code));
     renderVisibility();
   }
@@ -120,7 +124,9 @@
 
   function langHasContent(code) {
     const v = content[code];
-    return !!(v && (v.title.trim() || v.description.trim() || (v.landingPageUrl || '').trim()));
+    const hasText = !!(v && (v.title.trim() || v.description.trim() || (v.landingPageUrl || '').trim()));
+    const hasVisuals = !!(visualsByLang[code] && Object.keys(visualsByLang[code]).length);
+    return hasText || hasVisuals;
   }
 
   function renderLangTabs() {
@@ -170,21 +176,29 @@
     stashInputsToActive();
     activeLang = code;
     loadLangIntoInputs(code);
+    renderSlots();
     renderLangTabs();
   }
 
-  /* -------------------- Visual slots -------------------- */
+  /* -------------------- Visual slots (per language) -------------------- */
   function renderSlots() {
     const wrap = $('slots');
+    const vis = curVisuals();
+    const isEn = activeLang === 'en';
+    // 9:16 is required only for the English base; other languages are optional.
+    $('visualHint').innerHTML = isEn
+      ? 'One image per aspect ratio. <b>9:16 is required.</b> JPG / PNG / WebP — large images are automatically optimized.'
+      : `Optional ${langLabel(activeLang)} visuals. Leave empty and this language falls back to the English images.`;
     wrap.innerHTML = '';
     RATIOS.forEach((r) => {
-      const filled = !!visuals[r.ratio];
+      const filled = !!vis[r.ratio];
+      const required = r.required && isEn;
       const slot = document.createElement('div');
-      slot.className = 'slot' + (filled ? ' filled' : '') + (r.required ? ' required' : '');
+      slot.className = 'slot' + (filled ? ' filled' : '') + (required ? ' required' : '');
       slot.innerHTML = `
         <div class="slot__ratio">${r.ratio}</div>
         <div class="slot__dims">${r.dims}</div>
-        <img class="slot__preview" alt="" ${filled ? `src="${visuals[r.ratio].url}"` : ''} />
+        <img class="slot__preview" alt="" ${filled ? `src="${vis[r.ratio].url}"` : ''} />
         <label class="slot__btn">${filled ? 'Replace' : 'Upload'}
           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
         </label>
@@ -192,9 +206,14 @@
       const input = slot.querySelector('input[type="file"]');
       input.addEventListener('change', (e) => handleUpload(e, r.ratio));
       const remove = slot.querySelector('.slot__remove');
-      if (remove) remove.addEventListener('click', () => { delete visuals[r.ratio]; renderSlots(); });
+      if (remove) remove.addEventListener('click', () => { delete curVisuals()[r.ratio]; renderSlots(); renderLangTabs(); });
       wrap.appendChild(slot);
     });
+  }
+
+  function langLabel(code) {
+    const l = CONTENT_LANGS.find((x) => x.code === code);
+    return l ? l.label : code;
   }
 
   function fileToBase64(blob) {
@@ -278,8 +297,9 @@
         headers: authHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ filename: prepared.filename, contentType: prepared.contentType, dataBase64 }),
       });
-      visuals[ratio] = { assetId: data.assetId, url: data.url, filename: data.filename, contentType: data.contentType };
+      curVisuals()[ratio] = { assetId: data.assetId, url: data.url, filename: data.filename, contentType: data.contentType };
       renderSlots();
+      renderLangTabs();
       toast(`${ratio} visual uploaded`);
     } catch (err) {
       btn.firstChild.nodeValue = label;
@@ -347,9 +367,10 @@
     $('fUtm').value = c.utmCampaign;
     $('fStatus').value = c.status;
 
-    // Load per-language content: English from the base fields, others from translations.
+    // Load per-language content + visuals: English from the base, others from translations.
     content = emptyContent();
     content.en = { title: c.title || '', description: c.description || '', landingPageUrl: c.landingPageUrl || '' };
+    visualsByLang = { en: visualArrayToMap(c.visuals) };
     const tr = c.translations || {};
     CONTENT_LANGS.forEach((l) => {
       if (l.code !== 'en' && tr[l.code]) {
@@ -358,11 +379,13 @@
           description: tr[l.code].description || '',
           landingPageUrl: tr[l.code].landingPageUrl || '',
         };
+        if (Array.isArray(tr[l.code].visuals)) visualsByLang[l.code] = visualArrayToMap(tr[l.code].visuals);
       }
     });
     activeLang = 'en';
     renderLangTabs();
     loadLangIntoInputs('en');
+    renderSlots();
 
     // Visibility: absent → shown to all languages (backward-compatible).
     const all = CONTENT_LANGS.map((l) => l.code);
@@ -371,21 +394,22 @@
     );
     renderVisibility();
 
-    visuals = {};
-    (c.visuals || []).forEach((v) => { visuals[v.ratio] = v; });
     $('editorTitle').textContent = 'Edit campaign';
-    renderSlots();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function visualArrayToMap(arr) {
+    const m = {};
+    (arr || []).forEach((v) => { if (v && v.ratio) m[v.ratio] = v; });
+    return m;
   }
 
   function resetForm() {
     $('campForm').reset();
     $('campId').value = '';
-    visuals = {};
     resetContent();
     $('editorTitle').textContent = 'New campaign';
     $('formErr').textContent = '';
-    renderSlots();
   }
 
   async function deleteCampaign(c) {
@@ -415,8 +439,10 @@
       switchLang('en');
       return;
     }
-    if (!visuals['9:16']) {
-      $('formErr').textContent = 'A 9:16 portrait key visual is required.';
+    const enVisuals = visualsByLang.en || {};
+    if (!enVisuals['9:16']) {
+      $('formErr').textContent = 'A 9:16 portrait key visual is required (English).';
+      switchLang('en');
       return;
     }
     if (visibleLangs.size === 0) {
@@ -424,13 +450,17 @@
       return;
     }
 
+    const visualMapToArray = (m) => Object.entries(m || {}).map(([ratio, v]) => ({ ratio, ...v }));
     const translations = {};
     CONTENT_LANGS.forEach((l) => {
       if (l.code === 'en') return;
       const title = content[l.code].title.trim();
       const description = content[l.code].description.trim();
       const landingPageUrl = content[l.code].landingPageUrl.trim();
-      if (title || description || landingPageUrl) translations[l.code] = { title, description, landingPageUrl };
+      const visuals = visualMapToArray(visualsByLang[l.code]);
+      if (title || description || landingPageUrl || visuals.length) {
+        translations[l.code] = { title, description, landingPageUrl, visuals };
+      }
     });
 
     const id = $('campId').value;
@@ -443,7 +473,7 @@
       utmCampaign: $('fUtm').value.trim(),
       status: $('fStatus').value,
       visibleLanguages: CONTENT_LANGS.map((l) => l.code).filter((c) => visibleLangs.has(c)),
-      visuals: Object.entries(visuals).map(([ratio, v]) => ({ ratio, ...v })),
+      visuals: visualMapToArray(enVisuals),
     };
     const btn = $('saveBtn');
     btn.disabled = true;

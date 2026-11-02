@@ -124,7 +124,10 @@ function normalizeTranslations(input) {
         const title = String(v.title || '').trim();
         const description = String(v.description || '').trim();
         const landingPageUrl = isValidUrl(v.landingPageUrl) ? String(v.landingPageUrl).trim() : '';
-        if (title || description || landingPageUrl) out[code] = { title, description, landingPageUrl };
+        const visuals = normalizeVisuals(v.visuals);
+        if (title || description || landingPageUrl || visuals.length) {
+          out[code] = { title, description, landingPageUrl, visuals };
+        }
       }
     }
   }

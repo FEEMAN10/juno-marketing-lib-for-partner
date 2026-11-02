@@ -84,8 +84,17 @@
     return c[field] || '';
   }
 
+  // Visuals for the current language; falls back to the English base set.
+  function localizedVisuals(c) {
+    const lang = window.I18N.current();
+    const tr = c.translations && c.translations[lang];
+    if (tr && Array.isArray(tr.visuals) && tr.visuals.length) return tr.visuals;
+    return c.visuals || [];
+  }
+
   function render9x16(campaign) {
-    const v = (campaign.visuals || []).find((x) => x.ratio === '9:16') || (campaign.visuals || [])[0];
+    const vis = localizedVisuals(campaign);
+    const v = vis.find((x) => x.ratio === '9:16') || vis[0];
     return v ? v.url : '';
   }
 
@@ -144,7 +153,7 @@
   }
 
   function renderCreatives(c) {
-    const visuals = c.visuals || [];
+    const visuals = localizedVisuals(c);
     if (!visuals.length) {
       els.creativesGrid.innerHTML = `<div class="empty">${escapeHtml(t('no_creatives'))}</div>`;
       return;
